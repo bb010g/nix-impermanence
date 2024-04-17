@@ -484,11 +484,12 @@ in
           let
             targetFile = concatPaths [ persistentStoragePath filePath ];
             mountPoint = filePath;
-            args = [
-              mountPoint
-              targetFile
-              debugging.enable
-            ];
+            args =
+              optionals debugging.enable [ "--verbose" "--verbose" "--verbose" ] ++
+              [
+                mountPoint
+                targetFile
+              ];
           in
           {
             "persist-${escapeSystemdPath targetFile}" = {
@@ -541,14 +542,15 @@ in
             ...
           }:
           let
-            args = [
-              persistentStoragePath
-              dirPath
-              user
-              group
-              mode
-              debugging.enable
-            ];
+            args =
+              optionals debugging.enable [ "--verbose" "--verbose" "--verbose" ] ++
+              [
+                persistentStoragePath
+                dirPath
+                user
+                group
+                mode
+              ];
           in
           ''
             ${createDirectories} ${escapeShellArgs args}
@@ -652,11 +654,12 @@ in
           let
             mountPoint = filePath;
             targetFile = concatPaths [ persistentStoragePath filePath ];
-            args = [
-              mountPoint
-              targetFile
-              debugging.enable
-            ];
+            args =
+              optionals debugging.enable [ "--verbose" "--verbose" "--verbose" ] ++
+              [
+                mountPoint
+                targetFile
+              ];
           in
           ''
             ${mountFile} ${escapeShellArgs args}

@@ -8,9 +8,20 @@ set -o noglob             # Disable filename expansion (globbing),
                           # since it could otherwise happen during
                           # path splitting.
 shopt -s inherit_errexit  # Inherit the errexit option status in subshells.
+shopt -s extglob          # Extend pattern matching.
+
+verbosity="0"
+die() { printf '%s\n' "$@" >&2; exit 1; }
+die_option() { die "ERROR: ${1@Q} requires an option argument."; }
+verbose() {
+    if (( verbosity >= $1 )); then
+        shift
+        printf '%s\n' "$@"
+    fi
+}
 
 # Print a useful trace when an error occurs
-trap 'echo Error when executing ${BASH_COMMAND} at line ${LINENO}! >&2' ERR
+trap 'printf "%s\n" "ERROR: Error when executing ${BASH_COMMAND@Q} at line ${LINENO}!" >&2' ERR
 
 # Given a source directory, /source, and a target directory,
 # /target/foo/bar/bazz, we want to "clone" the target structure
@@ -28,18 +39,36 @@ trap 'echo Error when executing ${BASH_COMMAND} at line ${LINENO}! >&2' ERR
 #   3. Copy the mode of the source path to the target path
 
 # Get inputs from command line arguments
-if [[ "$#" != 6 ]]; then
-    printf "Error: 'create-directories.bash' requires *six* args.\n" >&2
-    exit 1
-fi
-sourceBase="$1"
-target="$2"
-user="$3"
-group="$4"
-mode="$5"
-debug="$6"
+debug="0"
+while :; do
+    case "${1+x}" in '') break;; esac
+    case "${1-}" in
+        '--verbose')
+            ((verbosity++)) || :
+            ;;
+        '--quiet')
+            ((verbosity--)) || :
+            ;;
+        '--') shift; break;;
+        '-'?|'--'*) die "ERROR: Unknown top-level option: $1";;
+        '-'??*) die "ERROR: Switches must not be ran together: $1";;
+        *) break
+    esac
+    shift
+done
+case "${1+x}" in '') die "ERROR: Specify a source directory.";; esac
+sourceBase="$1"; shift
+case "${1+x}" in '') die "ERROR: Specify a target directory.";; esac
+target="$1"; shift
+case "${1+x}" in '') die "ERROR: Specify a user.";; esac
+user="$1"; shift
+case "${1+x}" in '') die "ERROR: Specify a group.";; esac
+group="$1"; shift
+case "${1+x}" in '') die "ERROR: Specify a mode.";; esac
+mode="$1"; shift
+case "${1+x}" in 'x') die "ERROR: Unknown top-level positional argument: $3";; esac
 
-if (( "$debug" )); then
+if (( verbosity >= 2 )); then
     set -o xtrace
 fi
 
@@ -47,12 +76,14 @@ fi
 # create them with the specified permissions
 realSource="$(realpath -m "$sourceBase$target")"
 if [[ ! -d "$realSource" ]]; then
-    printf "Warning: Source directory '%s' does not exist; it will be created for you with the following permissions: owner: '%s:%s', mode: '%s'.\n" "$realSource" "$user" "$group" "$mode"
+    verbose 0 "WARNING: Source directory '%s' does not exist; it will be created for you with the following permissions: owner: '%s:%s', mode: '%s'.\n" "$realSource" "$user" "$group" "$mode" >&2
     mkdir --mode="$mode" "$realSource"
     chown "$user:$group" "$realSource"
 fi
 
-[[ -d "$target" ]] || mkdir "$target"
+if [[ ! -d "$target" ]]; then
+    mkdir "$target"
+fi
 
 # synchronize perms between source and target
 chown --reference="$realSource" "$target"
