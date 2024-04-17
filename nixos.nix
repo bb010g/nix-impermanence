@@ -61,6 +61,10 @@ let
     cp ${./mount-file.bash} "$out"
     patchShebangs "$out"
   '';
+  unmountFile = pkgs.runCommand "impermanence-unmount-file" { buildInputs = [ pkgs.bash ]; } ''
+    cp ${./unmount-file.bash} "$out"
+    patchShebangs "$out"
+  '';
 
   # Create fileSystems bind mount entry.
   mkBindMountNameValuePair = { dirPath, hideMount, persistentStoragePath, ... }: {
@@ -529,15 +533,7 @@ in
                 Type = "oneshot";
                 RemainAfterExit = true;
                 ExecStart = "${mountFile} ${escapeShellArgs args}";
-                ExecStop = pkgs.writeShellScript "unbindOrUnlink-${escapeSystemdPath targetFile}" ''
-                  set -eu
-                  if [[ -L ${escapeShellArg mountPoint} ]]; then
-                      rm ${escapeShellArg mountPoint}
-                  else
-                      umount ${escapeShellArg mountPoint}
-                      rm ${escapeShellArg mountPoint}
-                  fi
-                '';
+                ExecStop = "${unmountFile} ${escapeShellArgs args}";
               };
             };
           };
