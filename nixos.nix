@@ -16,6 +16,7 @@ let
     filterAttrs
     flatten
     foldl'
+    genList
     isString
     listToAttrs
     literalExpression
@@ -24,6 +25,7 @@ let
     mkDefault
     mkOption
     optional
+    optionals
     optionalString
     recursiveUpdate
     types
@@ -42,6 +44,12 @@ let
     parentsOf
     splitPath
     ;
+
+  verbosityArgs = verbosity:
+    if verbosity >= 0 then
+      genList (_: "--verbose") verbosity
+    else
+      genList (_: "--quiet") (-verbosity);
 
   cfg = config.environment.persistence;
   opt = options.environment.persistence;
@@ -127,6 +135,16 @@ in
                       Enable debug trace output when running
                       scripts. You only need to enable this if asked
                       to.
+                    '';
+                  };
+                  debugging.verbosity = mkOption {
+                    type = types.int;
+                    default = config.debugging.verbosity;
+                    defaultText = lib.literalExample "config.${options.debugging.verbosity}";
+                    internal = true;
+                    description = ''
+                      The verbosity level of the debug output. You only need to
+                      adjust this if asked to.
                     '';
                   };
                 };
@@ -428,6 +446,15 @@ in
                       to.
                     '';
                   };
+                  debugging.verbosity = mkOption {
+                    type = types.int;
+                    default = 3;
+                    internal = true;
+                    description = ''
+                      The verbosity level of the debug output. You only need to
+                      adjust this if asked to.
+                    '';
+                  };
                 };
               config =
                 let
@@ -485,7 +512,7 @@ in
             targetFile = concatPaths [ persistentStoragePath filePath ];
             mountPoint = filePath;
             args =
-              optionals debugging.enable [ "--verbose" "--verbose" "--verbose" ] ++
+              optionals debugging.enable (verbosityArgs debugging.verbosity) ++
               [
                 mountPoint
                 targetFile
@@ -543,7 +570,7 @@ in
           }:
           let
             args =
-              optionals debugging.enable [ "--verbose" "--verbose" "--verbose" ] ++
+              optionals debugging.enable (verbosityArgs debugging.verbosity) ++
               [
                 persistentStoragePath
                 dirPath
@@ -655,7 +682,7 @@ in
             mountPoint = filePath;
             targetFile = concatPaths [ persistentStoragePath filePath ];
             args =
-              optionals debugging.enable [ "--verbose" "--verbose" "--verbose" ] ++
+              optionals debugging.enable (verbosityArgs debugging.verbosity) ++
               [
                 mountPoint
                 targetFile
