@@ -49,8 +49,8 @@ let
     // (zipAttrsWith (_name: flatten) (filter (v: v.enable) (attrValues cfg)));
   inherit (allPersistentStoragePaths) files directories;
   mountFile = pkgs.runCommand "impermanence-mount-file" { buildInputs = [ pkgs.bash ]; } ''
-    cp ${./mount-file.bash} $out
-    patchShebangs $out
+    cp ${./mount-file.bash} "$out"
+    patchShebangs "$out"
   '';
 
   # Create fileSystems bind mount entry.
@@ -482,8 +482,13 @@ in
       let
         mkPersistFileService = { enableDebugging, filePath, persistentStoragePath, ... }:
           let
-            targetFile = escapeShellArg (concatPaths [ persistentStoragePath filePath ]);
-            mountPoint = escapeShellArg filePath;
+            targetFile = concatPaths [ persistentStoragePath filePath ];
+            mountPoint = filePath;
+            args = [
+              mountPoint
+              targetFile
+              enableDebugging
+            ];
           in
           {
             "persist-${escapeSystemdPath targetFile}" = {
@@ -495,14 +500,14 @@ in
               serviceConfig = {
                 Type = "oneshot";
                 RemainAfterExit = true;
-                ExecStart = "${mountFile} ${mountPoint} ${targetFile} ${escapeShellArg enableDebugging}";
+                ExecStart = "${mountFile} ${escapeShellArgs args}";
                 ExecStop = pkgs.writeShellScript "unbindOrUnlink-${escapeSystemdPath targetFile}" ''
                   set -eu
-                  if [[ -L ${mountPoint} ]]; then
-                      rm ${mountPoint}
+                  if [[ -L ${escapeShellArg mountPoint} ]]; then
+                      rm ${escapeShellArg mountPoint}
                   else
-                      umount ${mountPoint}
-                      rm ${mountPoint}
+                      umount ${escapeShellArg mountPoint}
+                      rm ${escapeShellArg mountPoint}
                   fi
                 '';
               };
@@ -647,14 +652,14 @@ in
           let
             mountPoint = filePath;
             targetFile = concatPaths [ persistentStoragePath filePath ];
-            args = escapeShellArgs [
+            args = [
               mountPoint
               targetFile
               enableDebugging
             ];
           in
           ''
-            ${mountFile} ${args}
+            ${mountFile} ${escapeShellArgs args}
           '';
 
         persistFileScript =
