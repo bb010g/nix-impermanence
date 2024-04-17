@@ -118,10 +118,10 @@ in
                       placed within.
                     '';
                   };
-                  enableDebugging = mkOption {
+                  debugging.enable = mkOption {
                     type = bool;
-                    default = config.enableDebugging;
-                    defaultText = lib.literalExample "config.${options.enableDebugging}";
+                    default = config.debugging.enable;
+                    defaultText = lib.literalExample "config.${options.debugging.enable}";
                     internal = true;
                     description = ''
                       Enable debug trace output when running
@@ -418,7 +418,7 @@ in
                     '';
                   };
 
-                  enableDebugging = mkOption {
+                  debugging.enable = mkOption {
                     type = bool;
                     default = false;
                     internal = true;
@@ -480,14 +480,14 @@ in
   config = {
     systemd.services =
       let
-        mkPersistFileService = { enableDebugging, filePath, persistentStoragePath, ... }:
+        mkPersistFileService = { debugging, filePath, persistentStoragePath, ... }:
           let
             targetFile = concatPaths [ persistentStoragePath filePath ];
             mountPoint = filePath;
             args = [
               mountPoint
               targetFile
-              enableDebugging
+              debugging.enable
             ];
           in
           {
@@ -532,8 +532,8 @@ in
 
         mkDirWithPerms =
           {
+            debugging,
             dirPath,
-            enableDebugging,
             group,
             mode,
             persistentStoragePath,
@@ -547,7 +547,7 @@ in
               user
               group
               mode
-              enableDebugging
+              debugging.enable
             ];
           in
           ''
@@ -590,7 +590,7 @@ in
                       user = dir.user;
                       group = users.${dir.user}.group;
                       inherit defaultPerms;
-                      inherit (dir) persistentStoragePath enableDebugging;
+                      inherit (dir) persistentStoragePath debugging;
                     };
                   in
                   if dir.home != null then
@@ -620,7 +620,7 @@ in
                       concatPaths [ dir.home path ]
                     else
                       path;
-                  inherit (dir) persistentStoragePath home enableDebugging;
+                  inherit (dir) persistentStoragePath home debugging;
                   inherit (dir.defaultPerms) user group mode;
                 };
                 # Create new directory items for all parent
@@ -648,14 +648,14 @@ in
             exit $_status
           '';
 
-        mkPersistFile = { enableDebugging, filePath, persistentStoragePath, ... }:
+        mkPersistFile = { debugging, filePath, persistentStoragePath, ... }:
           let
             mountPoint = filePath;
             targetFile = concatPaths [ persistentStoragePath filePath ];
             args = [
               mountPoint
               targetFile
-              enableDebugging
+              debugging.enable
             ];
           in
           ''
