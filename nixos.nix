@@ -1,4 +1,4 @@
-{ config, lib, pkgs, utils, ... }:
+{ config, lib, options, pkgs, utils, ... }:
 
 let
   inherit (lib)
@@ -44,6 +44,7 @@ let
     ;
 
   cfg = config.environment.persistence;
+  opt = options.environment.persistence;
   users = config.users.users;
   allPersistentStoragePaths = { directories = [ ]; files = [ ]; users = [ ]; }
     // (zipAttrsWith (_name: flatten) (filter (v: v.enable) (attrValues cfg)));
@@ -90,7 +91,7 @@ in
         in
         attrsOf (
           submodule (
-            { config, name, ... }:
+            { config, name, options, ... }:
             let
               defaultPerms = {
                 mode = "0755";
@@ -101,8 +102,8 @@ in
                 options = {
                   persistentStoragePath = mkOption {
                     type = path;
-                    default = cfg.${name}.persistentStoragePath;
-                    defaultText = "environment.persistence.‹name›.persistentStoragePath";
+                    default = config.persistentStoragePath;
+                    defaultText = lib.literalExample "config.${options.persistentStoragePath}";
                     description = ''
                       The path to persistent storage where the real
                       file or directory should be stored.
@@ -119,8 +120,8 @@ in
                   };
                   enableDebugging = mkOption {
                     type = bool;
-                    default = cfg.${name}.enableDebugging;
-                    defaultText = "environment.persistence.‹name›.enableDebugging";
+                    default = config.enableDebugging;
+                    defaultText = lib.literalExample "config.${options.enableDebugging}";
                     internal = true;
                     description = ''
                       Enable debug trace output when running
@@ -190,8 +191,8 @@ in
                   };
                   hideMount = mkOption {
                     type = bool;
-                    default = cfg.${name}.hideMounts;
-                    defaultText = "environment.persistence.‹name›.hideMounts";
+                    default = config.hideMounts;
+                    defaultText = lib.literalExample "config.${options.hideMounts}";
                     example = true;
                     description = ''
                       Whether to hide bind mounts from showing up as
@@ -244,7 +245,6 @@ in
                   persistentStoragePath = mkOption {
                     type = path;
                     default = name;
-                    defaultText = "‹name›";
                     description = ''
                       The path to persistent storage where the real
                       files and directories should be stored.
