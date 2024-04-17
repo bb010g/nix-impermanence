@@ -1,4 +1,4 @@
-{ pkgs, config, lib, ... }:
+{ config, lib, pkgs, ... }:
 
 with lib;
 let
@@ -11,7 +11,7 @@ let
   isBindfs = v: (getDirMethod v) == "bindfs";
   isSymlink = v: (getDirMethod v) == "symlink";
 
-  inherit (pkgs.callPackage ./lib.nix { })
+  inherit (import ./lib.nix { inherit lib; })
     splitPath
     dirListToPath
     concatPaths

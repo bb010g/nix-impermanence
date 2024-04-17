@@ -1,46 +1,46 @@
-{ pkgs, config, lib, utils, ... }:
+{ config, lib, pkgs, utils, ... }:
 
 let
   inherit (lib)
+    all
     attrNames
     attrValues
-    zipAttrsWith
-    flatten
-    mkOption
-    mkDefault
-    mapAttrsToList
-    types
-    foldl'
-    unique
+    catAttrs
     concatMapStrings
-    listToAttrs
+    concatMapStringsSep
+    concatStringsSep
+    elem
     escapeShellArg
     escapeShellArgs
-    recursiveUpdate
-    all
     filter
     filterAttrs
-    concatStringsSep
-    concatMapStringsSep
+    flatten
+    foldl'
     isString
-    catAttrs
-    optional
+    listToAttrs
     literalExpression
-    optionalString
-    elem
     mapAttrs
+    mapAttrsToList
+    mkDefault
+    mkOption
+    optional
+    optionalString
+    recursiveUpdate
+    types
+    unique
+    zipAttrsWith
     ;
 
   inherit (utils)
     escapeSystemdPath
     ;
 
-  inherit (pkgs.callPackage ./lib.nix { })
-    splitPath
-    dirListToPath
+  inherit (import ./lib.nix { inherit lib; })
     concatPaths
+    dirListToPath
     duplicates
     parentsOf
+    splitPath
     ;
 
   cfg = config.environment.persistence;
@@ -54,7 +54,7 @@ let
   '';
 
   # Create fileSystems bind mount entry.
-  mkBindMountNameValuePair = { dirPath, persistentStoragePath, hideMount, ... }: {
+  mkBindMountNameValuePair = { dirPath, hideMount, persistentStoragePath, ... }: {
     name = concatPaths [ "/" dirPath ];
     value = {
       device = concatPaths [ persistentStoragePath dirPath ];
@@ -90,7 +90,7 @@ in
         in
         attrsOf (
           submodule (
-            { name, config, ... }:
+            { config, name, ... }:
             let
               defaultPerms = {
                 mode = "0755";
@@ -254,7 +254,7 @@ in
                   users = mkOption {
                     type = attrsOf (
                       submodule (
-                        { name, config, ... }:
+                        { config, name, ... }:
                         let
                           userDefaultPerms = {
                             inherit (defaultPerms) mode;
@@ -480,7 +480,7 @@ in
   config = {
     systemd.services =
       let
-        mkPersistFileService = { filePath, persistentStoragePath, enableDebugging, ... }:
+        mkPersistFileService = { enableDebugging, filePath, persistentStoragePath, ... }:
           let
             targetFile = escapeShellArg (concatPaths [ persistentStoragePath filePath ]);
             mountPoint = escapeShellArg filePath;
@@ -526,13 +526,14 @@ in
         '';
 
         mkDirWithPerms =
-          { dirPath
-          , persistentStoragePath
-          , user
-          , group
-          , mode
-          , enableDebugging
-          , ...
+          {
+            dirPath,
+            enableDebugging,
+            group,
+            mode,
+            persistentStoragePath,
+            user,
+            ...
           }:
           let
             args = [
@@ -642,7 +643,7 @@ in
             exit $_status
           '';
 
-        mkPersistFile = { filePath, persistentStoragePath, enableDebugging, ... }:
+        mkPersistFile = { enableDebugging, filePath, persistentStoragePath, ... }:
           let
             mountPoint = filePath;
             targetFile = concatPaths [ persistentStoragePath filePath ];
