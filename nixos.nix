@@ -188,6 +188,40 @@ in
                       The path to the file.
                     '';
                   };
+                  method = mkOption {
+                    type = types.enum [ "auto" "bindfs" "symlink" ];
+                    default = "auto";
+                    example = "bindfs";
+                    description = ''
+                      The linking method that will be used for this file. By
+                      default, a method will be automatically selected, but some
+                      programs may behave better with either bindfs or a
+                      symlink.
+                    '';
+                  };
+                  bindfs.mountPoint.ignoreExistingEmpty = mkOption {
+                    type = bool;
+                    default = config.bindfs.mountPoints.ignoreExistingEmpties;
+                    defaultText = lib.literalExample "config.${options.bindfs.mountPoints.ignoreExistingEmpties}";
+                    example = true;
+                    description = ''
+                      Whether to ignore an existing empty file when creating an
+                      empty file.
+                    '';
+                  };
+                  bindfs.mountPoint.method = mkOption {
+                    type = types.enum [ "auto" "empty" "symlink" ];
+                    default = config.bindfs.mountPoints.method;
+                    defaultText = lib.literalExample "config.${options.bindfs.mountPoints.method}";
+                    example = "symlink";
+                    description = ''
+                      The creation method that will be used for the mount point
+                      file. By default, an empty file will be created.
+
+                      Note that bind mounting over a symlink, without following
+                      the symlink, requires util-linux v2.40 or later.
+                    '';
+                  };
                   parentDirectory =
                     commonOpts.options //
                     mapAttrs
@@ -440,6 +474,29 @@ in
                     '';
                   };
 
+                  bindfs.mountPoints.ignoreExistingEmpties = mkOption {
+                    type = bool;
+                    default = false;
+                    example = true;
+                    description = ''
+                      Whether to ignore existing empty files when creating empty
+                      files.
+                    '';
+                  };
+
+                  bindfs.mountPoints.method = mkOption {
+                    type = types.enum [ "auto" "empty" "symlink" ];
+                    default = "empty";
+                    example = "symlink";
+                    description = ''
+                      The default creation method that will be used for mount
+                      point files. By default, empty files will be created.
+
+                      Note that bind mounting over a symlink, without following
+                      the symlink, requires util-linux v2.40 or later.
+                    '';
+                  };
+
                   debugging.enable = mkOption {
                     type = bool;
                     default = false;
@@ -511,12 +568,15 @@ in
   config = {
     systemd.services =
       let
-        mkPersistFileService = { debugging, filePath, persistentStoragePath, ... }:
+        mkPersistFileService = { bindfs, debugging, filePath, method, persistentStoragePath, ... }:
           let
             targetFile = concatPaths [ persistentStoragePath filePath ];
             mountPoint = filePath;
             args =
               optionals debugging.enable (verbosityArgs debugging.verbosity) ++
+              optionals (method != "auto") [ "--method" method ] ++
+              optionals (bindfs.mountPoint.method != "auto") [ "--bindfs-mount-point-method" bindfs.mountPoint.method ] ++
+              optionals bindfs.mountPoint.ignoreExistingEmpty [ "--bindfs-mount-point-ignore-existing-empty" ] ++
               [
                 mountPoint
                 targetFile
@@ -673,12 +733,15 @@ in
             exit $_status
           '';
 
-        mkPersistFile = { debugging, filePath, persistentStoragePath, ... }:
+        mkPersistFile = { bindfs, debugging, filePath, method, persistentStoragePath, ... }:
           let
             mountPoint = filePath;
             targetFile = concatPaths [ persistentStoragePath filePath ];
             args =
               optionals debugging.enable (verbosityArgs debugging.verbosity) ++
+              optionals (method != "auto") [ "--method" method ] ++
+              optionals (bindfs.mountPoint.method != "auto") [ "--bindfs-mount-point-method" bindfs.mountPoint.method ] ++
+              optionals bindfs.mountPoint.ignoreExistingEmpty [ "--bindfs-mount-point-ignore-existing-empty" ] ++
               [
                 mountPoint
                 targetFile
